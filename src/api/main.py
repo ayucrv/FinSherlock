@@ -1,24 +1,20 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
-import tempfile
-import os
-from datetime import datetime
-
-from src.extractors.pdf_extractor import PDFExtractor
-from src.agent.financial_agent import FinancialAgent
-from src.models.database import SessionLocal, Report
+from src.services.pdf_service import PDFService
+from src.services.report_service import ReportService
+from src.services.analysis_service import AnalysisService
 
 app = FastAPI(
-    title="Financial AI Agent",
+    title="FinSherlock API",
     version="1.0"
 )
 
-agent = FinancialAgent()
+analysis_service = AnalysisService()
 
 
 @app.get("/")
 def root():
     return {
-        "message": "Financial AI Agent Running 🚀"
+        "message": "Welcome to FinSherlock 🕵️"
     }
 
 
@@ -32,98 +28,94 @@ def health():
 @app.post("/upload")
 async def upload_pdf(file: UploadFile = File(...)):
 
-    if not file.filename.endswith(".pdf"):
+    if not file.filename.lower().endswith(".pdf"):
+
         raise HTTPException(
             status_code=400,
-            detail="Only PDF files are allowed."
+            detail="Please upload a PDF."
         )
 
-    # Save uploaded PDF temporarily
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+    extraction = await PDFService.process_upload(file)
 
-        content = await file.read()
-        tmp.write(content)
-        temp_path = tmp.name
+    report = ReportService.save_report(
+        file.filename,
+        extraction
+    )
 
-    try:
+    analysis = analysis_service.analyze(
+        extraction["full_text"],
+        "Give a concise financial investigation summary."
+    )
 
-        # Extract PDF text
-        result = PDFExtractor.extract_text(temp_path)
+    return {
 
-        # AI Analysis
-        analysis = agent.analyze(
-            result["full_text"],
-            "Summarize this financial report."
-        )
+        "report_id": report.id,
 
-        # Save report to database
-        db = SessionLocal()
+        "filename": report.filename,
 
-        report = Report(
-            filename=file.filename,
-            company_name=file.filename.replace(".pdf", ""),
-            pages=result["total_pages"],
-            extracted_text=result["full_text"],
-            created_at=datetime.utcnow()
-        )
+        "company": report.company_name,
 
-        db.add(report)
-        db.commit()
-        db.refresh(report)
+        "pages": report.pages,
 
-        db.close()
+        "summary": analysis["answer"],
 
-        return {
+        "metrics": analysis["metrics"],
 
-            "report_id": report.id,
+        "risks": analysis["risks"]
 
-            "filename": report.filename,
-
-            "company": report.company_name,
-
-            "pages": report.pages,
-
-            "characters": result["total_chars"],
-
-            "metrics": analysis["metrics"],
-
-            "risks": analysis["risks"],
-
-            "summary": analysis["answer"]
-
-        }
-
-    finally:
-
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
+    }
 
 
 @app.get("/reports")
 def get_reports():
 
-    db = SessionLocal()
+    reports = ReportService.get_all_reports()
 
-    reports = db.query(Report).all()
+    return [
 
-    data = []
-
-    for report in reports:
-
-        data.append({
+        {
 
             "id": report.id,
 
-            "filename": report.filename,
-
             "company": report.company_name,
+
+            "filename": report.filename,
 
             "pages": report.pages,
 
             "created_at": report.created_at
 
-        })
+        }
 
-    db.close()
+        for report in reports
 
-    return data
+    ]
+
+
+@app.get("/report/{report_id}")
+def get_report(report_id: str):
+
+    report = ReportService.get_report(report_id)
+
+    if report is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Case not found."
+        )
+
+    return {
+
+        "id": report.id,
+
+        "company": report.company_name,
+
+        "filename": report.filename,
+
+        "pages": report.pages,
+
+        "text_preview": report.extracted_text[:1200],
+
+        "created_at": report.created_at
+
+    }
