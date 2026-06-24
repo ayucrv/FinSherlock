@@ -11,6 +11,7 @@ class ReportService:
         db = SessionLocal()
 
         report = Report(
+    id=extraction["report_id"],
 
             filename=filename,
 
