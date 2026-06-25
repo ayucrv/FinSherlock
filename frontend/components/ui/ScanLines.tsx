@@ -1,0 +1,1 @@
+export function ScanLines() { return <div className="crt absolute inset-0 pointer-events-none" /> }
