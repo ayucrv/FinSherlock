@@ -6,7 +6,7 @@ import InvestigationProcess from '@/components/Landing/InvestigationProcess'
 import CaseFiles from '@/components/Landing/CaseFiles'
 import SupportedReports from '@/components/Landing/SupportedReports'
 import Stats from '@/components/Landing/Stats'
-import Testimonials from '@/components/Landing/Testimonials'
+import SherryStory from '@/components/Landing/SherryStory'
 import FAQ from '@/components/Landing/FAQ'
 import Footer from '@/components/Landing/Footer'
 import { NoiseOverlay } from '@/components/ui/NoiseOverlay'
@@ -23,7 +23,7 @@ export default function Home() {
       <CaseFiles />
       <SupportedReports />
       <Stats />
-      <Testimonials />
+      <SherryStory /> 
       <FAQ />
       <Footer />
     </main>
