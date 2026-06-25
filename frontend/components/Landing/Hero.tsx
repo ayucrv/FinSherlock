@@ -13,14 +13,21 @@ export default function Hero() {
   const scale = useTransform(scrollY, [0, 500], [1, 0.9])
 
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const [winSize, setWinSize] = useState({ w: 1920, h: 1080 }) // fallback for SSR
 
   useEffect(() => {
-    const handleMouse = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY })
+    if (typeof window !== 'undefined') {
+      setWinSize({ w: window.innerWidth, h: window.innerHeight })
+      const handleMouse = (e: MouseEvent) => {
+        setMousePos({ x: e.clientX, y: e.clientY })
+      }
+      window.addEventListener('mousemove', handleMouse)
+      return () => window.removeEventListener('mousemove', handleMouse)
     }
-    window.addEventListener('mousemove', handleMouse)
-    return () => window.removeEventListener('mousemove', handleMouse)
   }, [])
+
+  const glowTransform1 = `translate(${((mousePos.x / winSize.w) - 0.5) * 30}px, ${((mousePos.y / winSize.h) - 0.5) * 30}px)`
+  const glowTransform2 = `translate(${-((mousePos.x / winSize.w) - 0.5) * 20}px, ${-((mousePos.y / winSize.h) - 0.5) * 20}px)`
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -28,15 +35,11 @@ export default function Hero() {
       <div className="absolute inset-0 bg-gradient-to-b from-noir-900 via-midnight to-noir-900 z-0" />
       <div
         className="absolute top-20 left-1/4 w-96 h-96 bg-gold-500/20 rounded-full blur-3xl"
-        style={{
-          transform: `translate(${(mousePos.x / window.innerWidth - 0.5) * 30}px, ${(mousePos.y / window.innerHeight - 0.5) * 30}px)`,
-        }}
+        style={{ transform: glowTransform1 }}
       />
       <div
         className="absolute bottom-10 right-1/4 w-80 h-80 bg-emerald-500/20 rounded-full blur-3xl"
-        style={{
-          transform: `translate(${-(mousePos.x / window.innerWidth - 0.5) * 20}px, ${-(mousePos.y / window.innerHeight - 0.5) * 20}px)`,
-        }}
+        style={{ transform: glowTransform2 }}
       />
 
       <motion.div style={{ y: y1, opacity, scale }} className="relative z-10 text-center max-w-5xl mx-auto px-6">
@@ -82,6 +85,7 @@ export default function Hero() {
         </motion.div>
       </motion.div>
 
+      {/* Floating evidence cards */}
       <motion.div
         style={{ y: y2 }}
         className="absolute top-1/3 left-10 hidden lg:block"
